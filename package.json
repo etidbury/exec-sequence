@@ -1,0 +1,16 @@
+{
+  "name": "exec-sequence",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Edd Tidbury",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "child_process": "^1.0.2",
+    "multispinner": "^0.2.1"
+  }
+}
