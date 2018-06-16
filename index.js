@@ -3,19 +3,21 @@ const chalk = require('chalk');
 const _exec = require('child_process').exec;
 
 const exec = (command, options) => {
-    const child = _exec(command, options);
+
     return new Promise((resolve, reject) => {
-        child.stderr.on('data', function (data) {
-            reject(data);
+
+        _exec(command, options,(e, stdout, stderr)=> {
+            if (e instanceof Error) {
+                reject(stderr);
+                return;
+            }
+            resolve(stdout);
         });
-        child.stdout.on('data', function (data) {
-            resolve(data);
-        });
+
     });
 };
 
-
-export default async (cmds) => {
+module.exports=async (cmds) => {
 
 
     const _msc = {};
@@ -62,11 +64,6 @@ export default async (cmds) => {
             }
 
 
-            if (!response) {
-                break;
-            }
-
-
         } catch (err) {
             multispinner.error(cmd.id);
             cmdError = {cmd, err};
@@ -83,7 +80,7 @@ export default async (cmds) => {
                     console.error("\n", chalk.bold(chalk.red(cmdError.cmd.error)));
                 }
 
-                console.error(chalk.grey(`\n${(cmdError.err && "\nError:\n") || ""}`), chalk.grey(cmdError.err && cmdError.err.message || cmd.err || ""), "\n");
+                console.error(chalk.grey(`\n${(cmdError.err && "\nError:\n") || ""}`), chalk.grey(cmdError.err && cmdError.err.message || cmdError.err || ""), "\n");
 
                 reject(cmdError);
                 return;
