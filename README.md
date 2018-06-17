@@ -36,7 +36,7 @@ require('exec-sequence')(
             options: {cwd: "./server"},
             error: "Maybe sure the 'server' folder exists"
         },
-    ]
+    ],{maxStdOutPerTask:10}
 ).then(() => {
     console.log(`All tasks ran successfully!`);
     process.exit(0);
