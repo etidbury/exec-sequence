@@ -178,13 +178,6 @@ module.exports=async (cmds,config) => {
                         stringShifted += '\t' + line + '\n';
                     });
 
-                    if (stringShifted.length>1000)
-                        stringShifted=stringShifted.substr(0,1000)+"\n...";
-
-
-
-
-
 
                     //errMessage=errMessage.replace('\n','\n\t');
 
