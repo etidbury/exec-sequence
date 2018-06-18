@@ -1,8 +1,6 @@
 const fse = require('fs-extra');
 
-const path=require('path');
-
-const envFilePath = path.join(process.env.PWD,'.env');
+const envFilePath = '.env';
 
 
 require('./')({
