@@ -31,7 +31,6 @@ const exec = async (command, options) => {
             } else {
                 reject({err: _data.join('\n'), code})
             }
-            //console.log('child process exited with code ' + code.toString());
         });
     });
 
@@ -221,7 +220,7 @@ module.exports = async (_tasks, config) => {
             if (task.command && typeof task.command === "string") {
                 ui.startProgress(task.name + " (Executing command...)");
 
-                await exec(task.command).catch(({err, code}) => {
+                await exec(task.command,task.options||{}).catch(({err, code}) => {
 
 
                     //prettify console output from command
