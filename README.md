@@ -4,7 +4,19 @@ A utility script for executing either promises or CLI commands sequentially whil
 <h3>Example Usage</h3>
 
 ```javascript
+
+const fse = require('fs-extra');
+const envFilePath = './.env';
+
 require('./')({
+    "Specify a PORT number": {
+        command: "exit 0",
+        prompt: "Port number? (e.g. 4000) ",
+        promise: (port) => fse.writeFile(envFilePath,`PORT=${port}`).then(()=>"Created .env file!"),
+        exists:envFilePath,
+        options: {cwd: "./"},
+        error: "Failed to open Google"
+    },
     "Open Google": {
         command: "open http://google.com/ && exit 0",
         options: {cwd: "./"},
@@ -16,7 +28,7 @@ require('./')({
         error: "Make sure you have committed/stashed your changes before trying to update the development branch"
     },
     "Test a promise resolve after 5s": {
-        promise: new Promise((resolve, reject) => {
+        promise: ()=>new Promise((resolve, reject) => {
             setTimeout(() => {
                 resolve("Successfully resolved after 5s");
             }, 5000);
@@ -24,7 +36,7 @@ require('./')({
         error: "Test promise failed to resolve after 5s"
     },
     "Test a promise rejection after 10s": {
-        promise: new Promise((resolve, reject) => {
+        promise: ()=>new Promise((resolve, reject) => {
             setTimeout(() => {
                 reject("No reason what so ever!");
             }, 10000);
@@ -45,5 +57,8 @@ require('./')({
         console.error(`Custom handler to spit out error for task '${cmd.text}':`, err);
         process.exit(1);
     });
+
+
+
 
 ```
