@@ -215,42 +215,58 @@ module.exports = async (_tasks, config) => {
                 p.addSubmessage({task, message: chalk.reset(`${figures.tick} `+response)})
             }
 
-            if (task.command && typeof task.command === "string") {
-                ui.startProgress(task.name + " (Executing command...)");
 
-                await exec(task.command,task.options||{}).catch(({err, code}) => {
+            if (task.command) {
+
+                if (typeof task.command === "function") {
+                    //todo: catch error related to unspecified args
+                    task.command=task.command(promptResponse);
+                }
+
+                if (typeof task.command === "string") {
+                    ui.startProgress(task.name + " (Executing command...)");
+
+                    await exec(task.command, task.options || {}).catch(({err, code}) => {
 
 
-                    //prettify console output from command
-                    let errMessage = (err);
+                        //prettify console output from command
+                        let errMessage = (err);
 
-                    let message = "";
+                        let message = "";
 
-                    errMessage.split('\n').forEach(function (line) {
-                        message += '\t' + line + '\n';
+                        errMessage.split('\n').forEach(function (line) {
+                            message += '\t' + line + '\n';
+                        });
+
+                        message = message.split('\n').slice(0, 5).join('\n') + (message.split('\n').length > 5 && "\n\t" + chalk.white.italic("(Showing only first 5 lines)") || "");
+
+                        throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
+
+
                     });
 
-                    message = message.split('\n').slice(0, 5).join('\n') + (message.split('\n').length > 5 && "\n\t" + chalk.white.italic("(Showing only first 5 lines)") || "");
 
-                    throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
+                }
+            }//end if task.command
+
+            if (task.exists) {
+
+                if (typeof task.exists === "function") {
+                    //todo: catch error related to unspecified args
+                    task.exists=task.exists(promptResponse);
+                }
+
+                if (typeof task.exists === "string") {
+                    ui.startProgress(task.name + ` (Checking file '${task.exists}' exists...)`);
 
 
-                });
+                    const exists = await fse.exists(task.exists);
 
+                    if (!exists) throw new Error(`File '${task.exists}' does not exist!`);
+                    else p.addSubmessage({task, message: chalk.reset(`${figures.tick} File '${task.exists}' exists`)})
+                }
 
-            }
-
-
-            if (task.exists && typeof task.exists === "string") {
-                ui.startProgress(task.name + ` (Checking file '${task.exists}' exists...)`);
-
-
-                const exists = await fse.exists(task.exists);
-
-                if (!exists) throw new Error(`File '${task.exists}' does not exist!`);
-                else p.addSubmessage({task, message: chalk.reset(`${figures.tick} File '${task.exists}' exists`)})
-            }
-
+            }//end if task.exists
 
             p.updateState({task, state: p.states.SUCCESS});
 
