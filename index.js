@@ -1,13 +1,17 @@
-const MultiSpinner = require('multispinner');
+const UI = require('console-ui');
+const clear = require('cli-clear');
 const chalk = require('chalk');
+const figures = require('figures');
+const inquirer = require('inquirer');
+const fse = require('fs-extra');
 const _exec = require('child_process').exec;
 
 const exec = async (command, options) => {
 
-    const e = await _exec(command, Object.assign(options, {}));
+    const e = await _exec(command, Object.assign(options || {}, {}));
 
     const {stdout, stderr} = e;
-    
+
     return new Promise((resolve, reject) => {
 
         const _data = [];
@@ -25,7 +29,7 @@ const exec = async (command, options) => {
             if (code === 0) {
                 resolve(_data.join('\n'))
             } else {
-                reject(_data.join('\n'))
+                reject({err: _data.join('\n'), code})
             }
             //console.log('child process exited with code ' + code.toString());
         });
@@ -33,207 +37,246 @@ const exec = async (command, options) => {
 
 };
 
-module.exports = async (_cmds, config) => {
+const ui = new UI({
+    inputStream: process.stdin,
+    outputStream: process.stdout,
+    errorStream: process.stderr,
+    writeLevel: 'DEBUG',
+    ci: !!process.env.CI
+});
 
-    let cmds = [];
+module.exports = async (_tasks, config) => {
 
-    if (!Object.keys(_cmds)||!Object.keys(_cmds).length)
+    let tasks = [];
+
+    if (!Object.keys(_tasks) || !Object.keys(_tasks).length)
         throw new Error("No tasks specified");
 
-    Object.keys(_cmds).forEach((text) => {
+    Object.keys(_tasks).forEach((text) => {
         if (!text || !text.length) throw new Error("Invalid task name specified");
 
-        if (typeof _cmds[text].promise ==="undefined"&&typeof _cmds[text].command ==="undefined")
+        if (typeof _tasks[text].promise === "undefined" && typeof _tasks[text].command === "undefined")
             throw new Error(`Task '${text}' has no promise or command specified! At least one must be specified`);
 
-        cmds.push(Object.assign(_cmds[text], {text, id: text, _text: text}))
+        tasks.push(Object.assign(_tasks[text], {name: text}))
     });
+
 
     config = Object.assign({
         maxStdOutPerTask: 10
     }, config);
 
 
-    const _msc = {};
+    const p = {
+        states: {
+            'PROGRESS': 'PROGRESS',
+            'INACTIVE': "INACTIVE",
+            'SUCCESS': 'SUCCESS',
+            'ERROR': 'ERROR'
+        },
+        lines: [],
+        addLine: function ({task, state}) {
+            this.lines.push({name: task.name, state});
+        },
+        addSubmessage: function ({task, message}) {
 
-    let i;
+            for (let i = 0; i < this.lines.length; i++) {
 
-    cmds.forEach((cmd) => {
-        _msc[cmd.text] = cmd.text;
-    });
+                const line = this.lines[i];
 
-    const multispinner = new MultiSpinner(_msc);
+                if (line.name === task.name) {
+                    if (!this.lines[i].sub)
+                        this.lines[i].sub = "";
 
-    const _origSpinnerText = [];
-    const _appendTextLines = [];
-
-
-    multispinner.appendText = function (cmd, text) {
-
-        //this.spinners[cmd.id]._text=this.spinners[cmd.id].text;
-
-        //const cmd=cmds[cmds.length-1];
-
-
-        if (!_origSpinnerText[cmd.id])
-            _origSpinnerText[cmd.id] = Object.assign({}, cmd).text;
-
-
-        if (!_appendTextLines[cmd.id])
-            _appendTextLines[cmd.id] = [];
-
-        text = chalk.white(text);//format text
-
-        _appendTextLines[cmd.id].push(text);
-
-        if (_appendTextLines[cmd.id].length >= config.maxStdOutPerTask)//restrict to X lines of text
-            _appendTextLines[cmd.id].shift();
-
-        this.spinners[cmd.id].text = cmd._text + ("\n" + _appendTextLines[cmd.id].join('\n'));
-    };
-
-    //let _activeCMD;
-
-    multispinner.resetText = function () {
-
-        Object.keys(this.spinners).forEach((key) => {
-            if (_origSpinnerText[key])
-                this.spinners[key].text = _origSpinnerText[key] + "";
-        });
-        //this.spinners[_activeCMD.id].text=this.spinners[_activeCMD.id]._text;
-    };
-
-    let _oldConsole = [];
-    const overrideConsoles = (j) => {
-
-        ['warn', 'log', 'error'].forEach((f) => {
-
-            if (!_oldConsole[f])
-                _oldConsole[f] = console[f];
-
-            global.console[f] = function () {
-
-                const args = [].slice.apply(arguments);
-                if (typeof j !== "number") {//reset
-                    Array.prototype.unshift.call(arguments);
-                    _oldConsole[f].apply(this, arguments);
-                } else {
-                    const prettyArgs = "\t" + args
-                        .filter((r) => (typeof r === "string" || typeof r === "object" || typeof r === "number"))
-                        .map((r) => typeof r === "number" && r || r.toString())
-                        .join('  ')
-                        .substr(0, 200);
-
-                    multispinner.appendText(cmds[j], prettyArgs);//todo: format arguments based on type
+                    this.lines[i].sub += "\t" + message + "\n";
+                    break;
                 }
-            };
-        });
+            }
+
+            this.render();
+        },
+        updateState: function ({task, state}) {
+
+            for (var i = 0; i < this.lines.length; i++) {
+
+                var line = this.lines[i];
+
+                if (line.name === task.name) {
+                    this.lines[i].state = state;
+                    break;
+                }
+            }
+
+            this.render();
+        },
+        render: function () {
+            clear();
 
 
+            let inProgressLine;
+
+            ui.writeLine(chalk.grey("_____________________"));
+
+
+            for (let i = 0; i < this.lines.length; i++) {
+                const line = this.lines[i];
+
+
+                switch (line.state) {
+                    case this.states.PROGRESS:
+                        ui.writeLine(chalk.bold(chalk.yellow(figures.pointer) + " " + line.name));
+                        ui.startProgress(line.name);
+                        inProgressLine = line;
+                        //ui.stopProgress();
+                        //ui.startProgress(chalk.yellow(line.name));
+                        break;
+                    case this.states.SUCCESS:
+                        ui.writeLine(chalk.green(figures.tick + " " + line.name));
+                        break;
+                    case this.states.ERROR:
+                        ui.writeLine(chalk.red(figures.cross + " " + line.name));
+                        break;
+
+                    default:
+                        ui.writeLine(chalk.white(figures.squareSmall + "  " + line.name));
+                        break;
+                }
+                if (line.sub && line.sub.length)
+                    ui.writeLine("   " + chalk.grey(line.sub));
+
+
+            }
+
+            ui.writeLine(chalk.grey("_____________________"));
+            if (inProgressLine)
+                ui.startProgress(inProgressLine.name);
+            else ui.stopProgress();
+
+            //inProgressLi
+
+
+        }
     };
 
+    for (var i = 0; i < tasks.length; i++) {
+        var task = tasks[i];
+        p.addLine({task: task, state: p.states.INACTIVE});
+    }
+    //process.exit();
+    //init
 
-    let cmdError = false;
+    p.updateState({task: tasks[0], state: p.states.INACTIVE});
 
-
-    for (i = 0; i < cmds.length; i++) {
-        const cmd = cmds[i];
+    for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i];
         try {
 
-            //cmd.id = cmd.text;
+            p.updateState({task, state: p.states.PROGRESS});
 
-            multispinner.resetText(cmd);//hide output console for task if success
+            let promptResponse;
 
-            overrideConsoles(i);
+            if (task.prompt) {
 
-            if (cmd.command && cmd.command.length) {
-                cmd.promise = async () => exec(cmd.command, cmd.options).catch((err) => {
-                    //console.error(err.message);
-                    // console.error(`Command '${cmd.command}' had an error:\n`,err);
+                ui.stopProgress();
 
+                if (typeof task.prompt === "string") {
+                    //format to default string specifier
+
+                    const responseName = "promptResponse";
+
+                    task.prompt = {type: "string", message: task.prompt, name: responseName};
+
+                    promptResponse = await inquirer.prompt(task.prompt).then((r) => r[responseName]);
+
+                } else {
+                    promptResponse = await inquirer.prompt(task.prompt);
+                }
+
+                if (promptResponse) {
+                    p.addSubmessage({task, message: chalk.reset(`${figures.tick} Passed values from prompt`)})
+                }else{
+                    p.addSubmessage({task, message: chalk.reset(`${chalk.red(figures.cross)} Passed values from prompt`)})
+                }
+            }
+
+
+            let response;
+
+
+            if (task.promise && typeof task.promise === "function") {
+
+                ui.startProgress(task.name + " (Executing promise...)");
+                response = await task.promise(promptResponse);
+
+            }
+
+            ui.stopProgress();
+
+            if (response) {//todo: add validator
+                p.addSubmessage({task, message: chalk.reset(`${figures.tick} `+response)})
+            }
+
+
+            if (task.command && typeof task.command === "string") {
+                ui.startProgress(task.name + " (Executing command...)");
+
+                await exec(task.command).catch(({err, code}) => {
+
+
+                    //prettify console output from command
                     let errMessage = (err);
 
-
-                    let stringShifted = "";
+                    let message = "";
 
                     errMessage.split('\n').forEach(function (line) {
-                        stringShifted += '\t' + line + '\n';
+                        message += '\t' + line + '\n';
                     });
 
+                    message = message.split('\n').slice(0, 5).join('\n') + (message.split('\n').length > 5 && "\n\t" + chalk.white.italic("(Showing only first 5 lines)") || "");
 
-                    //errMessage=errMessage.replace('\n','\n\t');
+                    throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
 
-                    console.error(`${chalk.white(chalk.bold.underline(cmd.command) + " output:\n")} `, chalk.grey(stringShifted), "\n");
 
-                    throw new Error(`Command '${cmd.command}' had an error`);
                 });
 
-                /*if (cmd.onData&&typeof cmd.onData==="function"){
-                    cmd.promise.childProcess.stdout.on('data',cmd.onData);
-                    cmd.promise.childProcess.stderr.on('data',cmd.onData);
-                }*/
 
             }
-            //
 
-            if (!cmd.promise || (typeof cmd.promise !== "function")) {
-                throw new Error(`'promise' field must be a function returning a Promise for task '${cmd.text}'`);
+
+            if (task.exists && typeof task.exists === "string") {
+                ui.startProgress(task.name + ` (Checking file '${task.exists}' exists...)`);
+
+
+                const exists = await fse.exists(task.exists);
+
+                if (!exists) throw new Error(`File '${task.exists}' does not exist!`);
+                else p.addSubmessage({task, message: chalk.reset(`${figures.tick} File '${task.exists}' exists`)})
             }
 
 
-            if (cmd.onInit && typeof cmd.onInit === "function") {
-
-                await cmd.onInit();
-            }
-
-            const response = await cmd.promise().then((c) => {
-
-
-                multispinner.success(cmd.id);
-
-                return c;
-            });
-
-
-            if (response && cmd.onData && typeof cmd.onData === "function") {
-                cmd.onData(response);
-            }
-
+            p.updateState({task, state: p.states.SUCCESS});
 
         } catch (err) {
 
-            multispinner.error(cmd.id);
-            cmdError = {cmd, err};
+            p.updateState({task, state: p.states.ERROR});
+
+            let errMessage;
+
+
+            if (err instanceof Error) {
+                errMessage = chalk.red(err);
+            } else if (typeof err === "string") {
+                errMessage = err;
+            }
+
+
+            if (errMessage)
+                p.addSubmessage({task, message: errMessage});
+
+
             break;
         }
-    }//end for
+    }
 
-    //wait to ensure all commands' states are rendered
-    await new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (cmdError) {
-
-                overrideConsoles();
-
-                if (cmdError.cmd.error && cmdError.cmd.error.length) {
-                    console.error("\n", chalk.black.bgRed(cmdError.cmd.error));
-
-                }
-
-                let errMessage = (cmdError.err && cmdError.err.message || cmdError.err || "");
-
-                if (errMessage.length > 300)
-                    errMessage = errMessage.substr(0, 300) + "\n...";
-
-
-                console.error(`\n${(cmdError.err && "\nError:\n") || ""}`, chalk.grey(errMessage), "\n");
-
-
-                reject(cmdError);
-                return;
-            }
-            resolve();
-        }, 1000);
-    });
 
 };
