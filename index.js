@@ -213,8 +213,6 @@ module.exports = async (_tasks, config) => {
 
             if (response&&typeof response==="string") {
                 p.addSubmessage({task, message: chalk.reset(`${figures.tick} `+response)})
-            }else{
-                p.addSubmessage({task, message: chalk.reset(`${figures.tick} Promise resolved successfully`)})
             }
 
             if (task.command && typeof task.command === "string") {

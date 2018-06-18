@@ -1,7 +1,9 @@
 const fse = require('fs-extra');
 
+const path=require('path');
 
-const envFilePath = './.env';
+const envFilePath = path.join(process.env.PWD,'.env');
+
 
 require('./')({
     "Specify a PORT number": {
