@@ -124,10 +124,8 @@ module.exports = async (_tasks, config) => {
                 switch (line.state) {
                     case this.states.PROGRESS:
                         ui.writeLine(chalk.bold(chalk.yellow(figures.pointer) + " " + line.name));
-                        ui.startProgress(line.name);
+                        ui.startProgress(line.name+" ");
                         inProgressLine = line;
-                        //ui.stopProgress();
-                        //ui.startProgress(chalk.yellow(line.name));
                         break;
                     case this.states.SUCCESS:
                         ui.writeLine(chalk.green(figures.tick + " " + line.name));
@@ -148,7 +146,7 @@ module.exports = async (_tasks, config) => {
 
             ui.writeLine(chalk.grey("_____________________"));
             if (inProgressLine)
-                ui.startProgress(inProgressLine.name);
+                ui.startProgress(inProgressLine.name+" ");
             else ui.stopProgress();
 
             //inProgressLi
@@ -204,7 +202,7 @@ module.exports = async (_tasks, config) => {
 
             if (task.promise && typeof task.promise === "function") {
 
-                ui.startProgress(task.name + " (Executing promise...)");
+                ui.startProgress(task.name + chalk.grey(" [Executing promise...] "));
                 response = await task.promise(promptResponse);
 
             }
@@ -224,7 +222,7 @@ module.exports = async (_tasks, config) => {
                 }
 
                 if (typeof task.command === "string") {
-                    ui.startProgress(task.name + " (Executing command...)");
+                    ui.startProgress(task.name + chalk.grey(" [Executing command...] "));
 
                     await exec(task.command, task.options || {}).catch(({err, code}) => {
 
@@ -257,7 +255,7 @@ module.exports = async (_tasks, config) => {
                 }
 
                 if (typeof task.exists === "string") {
-                    ui.startProgress(task.name + ` (Checking file '${task.exists}' exists...)`);
+                    ui.startProgress(task.name + chalk.grey(` [Checking file '${task.exists}' exists...] `));
 
 
                     const exists = await fse.exists(task.exists);

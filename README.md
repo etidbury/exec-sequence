@@ -8,7 +8,7 @@ A utility script for executing either promises or CLI commands sequentially whil
 const fse = require('fs-extra');
 const envFilePath = './.env';
 
-require('./')({
+require('exec-sequence')({
     "Specify a PORT number": {
         command: "exit 0",
         prompt: "Port number? (e.g. 4000) ",

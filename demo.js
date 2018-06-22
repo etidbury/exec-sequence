@@ -4,6 +4,24 @@ const envFilePath = '.env';
 
 
 require('./')({
+    "Random console logs": {
+        promise: () => new Promise((resolve,reject)=>{
+
+            const NUM_OUTS=5;
+            const INTERVAL=1000;
+
+            for (let i = 0; i < NUM_OUTS; i++) {
+                setTimeout(()=>{
+                    console.log("Random output",Math.random());
+                },INTERVAL*i);
+            }
+
+            setTimeout(()=>{
+                resolve();
+            },(NUM_OUTS+1)*INTERVAL);
+
+        })
+    },
     "Specify a PORT number": {
         command: "exit 0",
         prompt: "Port number? (e.g. 4000) ",
