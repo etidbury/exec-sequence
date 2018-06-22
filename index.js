@@ -35,6 +35,8 @@ const exec = async (command, options) => {
     });
 
 };
+module.exports.exec=exec;
+
 
 const ui = new UI({
     inputStream: process.stdin,
@@ -44,7 +46,7 @@ const ui = new UI({
     ci: !!process.env.CI
 });
 
-module.exports = async (_tasks, config) => {
+module.exports.run = async (_tasks, config) => {
 
     let tasks = [];
 
