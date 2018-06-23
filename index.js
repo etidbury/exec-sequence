@@ -238,7 +238,8 @@ module.exports.run = async (_tasks, config) => {
                             message += '\t' + line + '\n';
                         });
 
-                        message = message.split('\n').slice(0, 5).join('\n') + (message.split('\n').length > 5 && "\n\t" + chalk.white.italic("(Showing only first 5 lines)") || "");
+                        const NUM_OUTPUT_LINES=20;
+                        message = message.split('\n').slice(0, NUM_OUTPUT_LINES).join('\n') + (message.split('\n').length > NUM_OUTPUT_LINES && "\n\t" + chalk.white.italic(`(Showing only first ${NUM_OUTPUT_LINES} lines)`) || "");
 
                         throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
 
