@@ -62,3 +62,11 @@ require('exec-sequence')({
 
 
 ```
+
+##Roadmap / TODOs
+
+- Change error output log (the last 20 lines of output) to be the last of the stderr, not the beginning
+in order to to see what caused the failure (i.e. in docker build output)
+
+- Allow stdout printing during promise execution but minimised like error output
+in order to see progress being made by each execution
