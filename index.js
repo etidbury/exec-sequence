@@ -238,7 +238,7 @@ module.exports.run = async (_tasks, config) => {
                             message += '\t' + line + '\n';
                         });
 
-                        const NUM_OUTPUT_LINES=50;
+                        const NUM_OUTPUT_LINES=100;
                         message = message.split('\n').slice(-NUM_OUTPUT_LINES,message.split('\n').length ).join('\n') + (message.split('\n').length > NUM_OUTPUT_LINES && "\n\t" + chalk.white.italic(`(Showing only last ${NUM_OUTPUT_LINES} lines)`) || "");
 
                         throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
