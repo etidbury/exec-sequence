@@ -239,7 +239,7 @@ module.exports.run = async (_tasks, config) => {
                         });
 
                         const NUM_OUTPUT_LINES=20;
-                        message = message.split('\n').slice(0, NUM_OUTPUT_LINES).join('\n') + (message.split('\n').length > NUM_OUTPUT_LINES && "\n\t" + chalk.white.italic(`(Showing only first ${NUM_OUTPUT_LINES} lines)`) || "");
+                        message = message.split('\n').slice(-NUM_OUTPUT_LINES,message.split('\n').length ).join('\n') + (message.split('\n').length > NUM_OUTPUT_LINES && "\n\t" + chalk.white.italic(`(Showing only last ${NUM_OUTPUT_LINES} lines)`) || "");
 
                         throw `${task.error && task.error.length && chalk.bold(" " + task.error + " ") || `Exit Code ${code}`}\n\t${chalk.white(chalk.bold.underline(task.command) + " output:\n" + chalk.grey(message))}`;
 
