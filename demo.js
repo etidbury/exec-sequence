@@ -117,8 +117,8 @@ Fusce vulputate eget ante eget venenatis. Duis interdum, diam et congue tempor, 
     console.log(`All tasks ran successfully!`);
     process.exit(0);
 })
-    .catch(({cmd, err}) => {
-        console.error(`Custom handler to spit out error for task '${cmd.text}':`, err);
+    .catch(({task, err}) => {
+        console.error(`Custom handler to spit out error for task '${task.name}':`, err);
         process.exit(1);
     });
 
